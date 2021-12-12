@@ -49,10 +49,8 @@ abstract contract BeraMixin is BeraStorageKeys {
         return contractAddress;
     }
 
-    function getContractName(address addr) internal view returns(string memory) {
-        return BeraStorage.getString(
-            keccak256(abi.encodePacked(BeraStorageKeys.contracts.nameof, addr))
-        );
+    function getContractName(address addr) internal view returns (string memory) {
+        return BeraStorage.getString(keccak256(abi.encodePacked(BeraStorageKeys.contracts.nameof, addr)));
     }
 
     //=================================================================================================================

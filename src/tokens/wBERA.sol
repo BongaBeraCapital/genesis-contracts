@@ -9,9 +9,16 @@ import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 contract wBERA is ERC20("Wrapped Bera", "wBERA", 18) {
     using SafeTransferLib for address;
 
-    event Deposit(address indexed from, uint256 amount);
+    //=================================================================================================================
+    // Events
+    //=================================================================================================================
 
+    event Deposit(address indexed from, uint256 amount);
     event Withdrawal(address indexed to, uint256 amount);
+
+    //=================================================================================================================
+    // Functions
+    //=================================================================================================================
 
     function deposit() public payable {
         _mint(msg.sender, msg.value);

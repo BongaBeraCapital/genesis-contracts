@@ -1,8 +1,8 @@
 pragma solidity 0.8.10;
 // SPDX-License-Identifier: AGPL-3.0-only
 
+/* Package Imports */
 import {ERC20} from "solmate/tokens/ERC20.sol";
-
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
 contract sBERA is ERC20("Staked BERA", "sBERA", 18) {
