@@ -23,7 +23,11 @@ contract SBController is BeraMixin {
         version = 1;
     }
 
-    function deployPool(uint256 leverageFactor, address token, uint256 feePercentage) external onlyRegisteredContracts {
+    function deployPool(
+        uint256 leverageFactor,
+        address token,
+        uint256 feePercentage
+    ) external onlyRegisteredContracts {
         pools.push(new SBPool(address(BeraStorage), kodiaqRouter, kodiaqFactory, leverageFactor, token, feePercentage));
     }
 }
