@@ -15,7 +15,7 @@ import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathlib.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
-contract SBPoolWrapper is ERC20, BeraMixin {
+contract SBPoolWrapperBera is ERC20, BeraMixin {
     using SafeTransferLib for ERC20;
     using FixedPointMathLib for uint256;
     using KodiaqLibrary for IKodiaqRouter;
@@ -26,7 +26,8 @@ contract SBPoolWrapper is ERC20, BeraMixin {
     address kodiaqPair;
     uint256 leverageFactor;
     address beraReserve;
-    uint256 feePercentage = 2e16; // 2% fee for lending by default
+    uint256 feePercentage = 2.5e16; // 2% fee for lending by default
+    uint256 liqFeePercentage = 1e17; // 10% penalty for getting liquidated
     mapping(address => uint256) borrowedAmount;
     mapping(address => uint256) depositedCollateral;
 
@@ -56,28 +57,28 @@ contract SBPoolWrapper is ERC20, BeraMixin {
         assert(kodiaqPair != address(0));
     }
 
-    function borrow(
-        uint256 amount,
-        uint256 deadline
-    ) public {
+    /*///////////////////////////////////////////////////////////////
+                            Borrow & Repay
+    //////////////////////////////////////////////////////////////*/
+
+    function borrow(uint256 amountToBorrow) public {
         // Calculate amounts and fees
-        uint256 collateralToUse = kodiaqRouter.getQuote(amount, path[1], path[0]);
-        uint256 amountAfterFees = amount - amount.fmul(feePercentage, FixedPointMathLib.WAD);
+        uint256 collateralToUse = kodiaqRouter.getQuote(amountToBorrow, path[1], path[0]);
+        uint256 amountAfterFees = amountToBorrow - amountToBorrow.fmul(feePercentage, FixedPointMathLib.WAD);
         uint256 feeAmount = collateralToUse.fmul(feePercentage, FixedPointMathLib.WAD);
         uint256 collateralToUseAfterFee = collateralToUse - feeAmount;
         borrowedAmount[msg.sender] += amountAfterFees;
 
-        // Transfer fee to the reserves
+        // Burn fee portion of sbXXX token
+        _burn(msg.sender, feeAmount);
 
-        ERC20(this).safeTransfer(beraReserve, feeAmount);
-        
-        // Swap to get user BERA 
+        // Swap to get user BERA
         kodiaqRouter.swapExactTokensForBERASupportingFeeOnTransferTokens(
             collateralToUseAfterFee,
             amountAfterFees,
             path,
             msg.sender,
-            deadline
+            block.timestamp + 1
         );
 
         // Calculate how much LP is needed to bring balance of original Collateral back.
@@ -86,7 +87,7 @@ contract SBPoolWrapper is ERC20, BeraMixin {
             FixedPointMathLib.WAD
         );
 
-        // Withdraw LP needed to execute the dex swaps
+        // Withdraw LP needed to execute the dex swap
         IBeraReserve(beraReserve).withdrawToken(kodiaqPair, address(this), lpToWithdraw);
 
         // Restore Collateral balance
@@ -96,16 +97,33 @@ contract SBPoolWrapper is ERC20, BeraMixin {
             collateralToUseAfterFee,
             0,
             beraReserve,
-            deadline
+            block.timestamp + 1
         );
     }
 
-    function repay(address user, uint256 deadline) external payable {
+    function repay(address user) external payable {
         borrowedAmount[user] -= msg.value;
-        // Restore Dex Niceness
-        // TODO fix this up, if the price of BERA increased a lot, this function could fail.
-        kodiaqRouter.addLiquidityBERA{value: msg.value}(path[1], 0, 0, msg.value, beraReserve, deadline);
+        kodiaqRouter.addLiquidityBERA{value: msg.value}(path[1], 0, 0, msg.value, beraReserve, block.timestamp + 1);
     }
+
+    function liquidate(address user, uint256 amount) external {
+        uint256 liqAmount = amountEligibleForLiquidation(user);
+        if (liqAmount == 0) revert("SBPool: User is solvent");
+        // If amount is too large, chop it down to fully liq user
+        if (amount >= liqAmount)
+            amount = liqAmount;
+        // Transfer in underlying
+        ERC20(path[0]).safeTransferFrom(msg.sender, beraReserve, amount);
+        uint256 liquidationReward = amount.fmul(1e18 + liqFeePercentage, FixedPointMathLib.WAD);
+        // Reward user with amountUnderlying + incentive sb tokens
+        allowance[from][msg.sender] = liquidationReward;
+        // Override solvency safety checks because user is getting liquidated
+        this.transferForLiquidation(user, msg.sender, liquidationReward);
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                            Manage Collateral
+    //////////////////////////////////////////////////////////////*/
 
     function depositCollateral(uint256 user, uint256 collateral) public {
         // Pull tokens from user
@@ -114,12 +132,13 @@ contract SBPoolWrapper is ERC20, BeraMixin {
         _mint(msg.sender, collateral);
     }
 
-    function withdrawlCollateral(uint256 amount) public {
+    function withdrawlCollateral(uint256 amountToWithdraw) public {
         uint256 usedCollateral = kodiaqRouter.getQuote(borrowedAmount[msg.sender], path[1], path[0]);
-        require(amount < usedCollateral, "SBPool: Withdrawing would make user insolvent");
+        require(amountToWithdraw < usedCollateral, "SBPool: Withdrawing would make user insolvent");
         // Burn sbTokens
-        _burn(msg.sender, amount);
-        IBeraReserve(beraReserve).withdrawToken(path[0], msg.sender, amount);
+        _burn(msg.sender, amountToWithdraw);
+        // Withdraw the underlying collateral to the user
+        IBeraReserve(beraReserve).withdrawToken(path[0], msg.sender, amountToWithdraw);
     }
 
     function amountEligibleForLiquidation(address user) public view returns (uint256) {
@@ -133,10 +152,12 @@ contract SBPoolWrapper is ERC20, BeraMixin {
         return amountEligibleForLiquidation(user) == 0;
     }
 
-    function liquidate(address user, uint256 amount) external {
-        uint256 liqAmount = amountEligibleForLiquidation(user);
-        if (liqAmount == 0) revert("SBPool: User is solvent");
-        require (amount < liqAmount, "SBPool: User is not that insolvent");
+    function transferForLiquidation(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual returns (bool) {
+        super.transferFrom(from, to, amount);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -154,7 +175,7 @@ contract SBPoolWrapper is ERC20, BeraMixin {
         address to,
         uint256 amount
     ) public virtual override returns (bool) {
-       super.transferFrom(from, to, amount);
-       require(isSolvent(from), "SBPool: User insolvent post-transfer");
+        super.transferFrom(from, to, amount);
+        require(isSolvent(from), "SBPool: User insolvent post-transfer");
     }
 }
