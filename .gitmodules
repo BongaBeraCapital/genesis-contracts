@@ -10,3 +10,6 @@
 [submodule "lib/solmate.git"]
 	path = lib/solmate.git
 	url = https://github.com/BeraChain/solmate.git
+[submodule "lib/bera-solmate"]
+	path = lib/bera-solmate
+	url = https://github.com/BeraChain/bera-solmate
