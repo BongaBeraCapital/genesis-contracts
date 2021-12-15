@@ -2,7 +2,7 @@
 pragma solidity 0.8.10;
 /* Package Imports */
 import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+import {SafeTransferLib} from "bera-solmate/utils/SafeTransferLib.sol";
 
 contract BeraValidatorDelegation {
     IERC20 immutable sBERA;

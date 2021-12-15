@@ -1,7 +1,7 @@
 pragma solidity 0.8.10;
 
 // SPDX-License-Identifier: GPL-3.0-only
-import "solmate/tokens/ERC20.sol";
+import "bera-solmate/tokens/ERC20.sol";
 
 interface IBeraReserve {
     function depositBera() external payable;
@@ -9,5 +9,4 @@ interface IBeraReserve {
     function depositToken(address token, uint256 _amount) external;
     function balanceOfToken(address token) external view returns (uint256);
     function withdrawToken(address token, address to, uint256 amount) external;
-    function burnToken(address token, uint256 _amount) external;
 }

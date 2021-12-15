@@ -2,9 +2,9 @@
 pragma solidity 0.8.10;
 
 /* Package Imports */
-import {ERC20} from "solmate/tokens/ERC20.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+import {ERC20} from "bera-solmate/tokens/ERC20.sol";
+import {FixedPointMathLib} from "bera-solmate/utils/FixedPointMathLib.sol";
+import {SafeTransferLib} from "bera-solmate/utils/SafeTransferLib.sol";
 
 /* Local Imports */
 import {ArrayLib} from "../utils/ArrayLib.sol";
@@ -34,7 +34,7 @@ contract BeraValidatorRewards is BeraMixin {
 
             // 25 % To Reserves
             pair.approve(beraReserve, b / 4);
-            IBeraReserve(beraReserve).depositToken(pair, b / 4);
+            IBeraReserve(beraReserve).depositToken(address(pair), b / 4);
             b -= b / 4;
 
             // 75 % To Validators

@@ -7,8 +7,8 @@ import {IBeraReserve} from "../../interfaces/IBeraReserve.sol";
 import {IBeraStorage} from "../../interfaces/IBeraStorage.sol";
 
 /* Package Imports */
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {SafeTransferLib} from "bera-solmate/utils/SafeTransferLib.sol";
+import {ERC20} from "bera-solmate/tokens/ERC20.sol";
 
 contract BeraReserve is BeraMixin, IBeraReserve {
     using SafeTransferLib for ERC20;
@@ -42,13 +42,13 @@ contract BeraReserve is BeraMixin, IBeraReserve {
 
     function depositToken(address token, uint256 amount) external override {
         require(amount > 0, "No valid amount of tokens given to deposit");
-        require(ERC20(token).transferFrom(msg.sender, address(this), amount), "Token transfer was not successful");
+        ERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         emit TokenDeposited(msg.sender, address(token), amount, block.timestamp);
     }
 
     function withdrawBera(uint256 amount) external override onlyRegisteredContracts {
         require(amount > 0, "No valid amount of BERA given to withdraw");
-        (msg.sender).safeTransferETH(amount);
+        (msg.sender).safeTransferBERA(amount);
         emit BeraWithdrawn(msg.sender, amount, block.timestamp);
     }
 
@@ -60,12 +60,5 @@ contract BeraReserve is BeraMixin, IBeraReserve {
         require(amount > 0, "No valid amount of tokens given to transfer");
         ERC20(token).safeTransfer(to, amount);
         emit TokenWithdrawn(msg.sender, address(token), amount, block.timestamp);
-    }
-
-    function burnToken(address token, uint256 amount) external override onlyRegisteredContracts {
-        ERC20 tokenContract = ERC20(token);
-        // Burn the tokens
-        // tokenContract.burn(amount);
-        emit TokenBurned(msg.sender, address(token), amount, block.timestamp);
     }
 }

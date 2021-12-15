@@ -1,11 +1,11 @@
 pragma solidity >=0.8.0;
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+import {ERC20} from "bera-solmate/tokens/ERC20.sol";
+import {SafeTransferLib} from "bera-solmate/utils/SafeTransferLib.sol";
 
 /// @notice Minimalist and modern Wrapped Bera implementation.
-/// @author Inspired by WETH9 (https://github.com/dapphub/ds-weth/blob/master/src/weth9.sol)
+/// @author Inspired by WBERA9 (https://github.com/dapphub/ds-WBERA/blob/master/src/WBERA9.sol)
 contract wBERA is ERC20("Wrapped Bera", "wBERA", 18) {
     using SafeTransferLib for address;
 
@@ -29,7 +29,7 @@ contract wBERA is ERC20("Wrapped Bera", "wBERA", 18) {
     function withdraw(uint256 amount) external {
         _burn(msg.sender, amount);
 
-        msg.sender.safeTransferETH(amount);
+        msg.sender.safeTransferBERA(amount);
 
         emit Withdrawal(msg.sender, amount);
     }
