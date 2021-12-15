@@ -13,3 +13,6 @@
 [submodule "lib/bera-solmate"]
 	path = lib/bera-solmate
 	url = https://github.com/BeraChain/bera-solmate
+[submodule "lib/kodiaq-core"]
+	path = lib/kodiaq-core
+	url = https://github.com/BeraChain/kodiaq-core
