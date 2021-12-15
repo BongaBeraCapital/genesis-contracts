@@ -16,3 +16,6 @@
 [submodule "lib/kodiaq-core"]
 	path = lib/kodiaq-core
 	url = https://github.com/BeraChain/kodiaq-core
+[submodule "lib/kodiaq-periphery"]
+	path = lib/kodiaq-periphery
+	url = https://github.com/BeraChain/kodiaq-periphery
